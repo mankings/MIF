@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,43 +6,44 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from helpers import load_data
 
+PLOT_FOLDER = "plots"
 
 DATE_FORMAT = '%Y-%m-%d'
 START_DATE = "2020-01-01"
 END_DATE = "2023-12-31"
 
-WALLET1 = ["WOOD", "CUT", "IBB", "ERTH"]
-WALLET2 = ["VAW", "IYM", "BAS.DE", "DOW", "2020.SR", "CTVA", "MOS", "CF", "UAN"]
+WALLET1 = ["WOOD", "CUT", "IBB", "ERTH"]                                            # biological etf
+WEIGHTS1 = [1/len(WALLET1) for _ in WALLET1]
+
+WALLET2 = ["VAW", "IYM", "BAS.DE", "DOW", "2020.SR", "CTVA", "MOS", "CF", "UAN"]    # chemical etf
+WEIGHTS2 = [1/len(WALLET2) for _ in WALLET2]
 
 def main():
-    w1 = [(ticker, 1/len(WALLET1)) for ticker in WALLET1]
-    w2 = [(ticker, 1/len(WALLET2)) for ticker in WALLET2]
+    print("\nWallet 1:\n")
+    w1_data = [load_data(ticker, START_DATE, END_DATE) for ticker in WALLET1]
+    w1 = list(zip(WALLET1, WEIGHTS1, w1_data))
 
-    print("\n\tWallet 1:\n")
-    weighted_wallet_analysis(w1, START_DATE, END_DATE)
-    print("\t------------------")
-    print("\n\tWallet 2:\n")
-    weighted_wallet_analysis(w2, START_DATE, END_DATE)
+    weighted_wallet_analysis(w1)
+    normalized_graphs(w1, "wallet1_normalized.png")
+    
+    print("------------------")
 
-    # normalized_graphs(WALLET1)
-    # normalized_graphs(WALLET2)
+    print("\nWallet 2:\n")
+    w2_data = [load_data(ticker, START_DATE, END_DATE) for ticker in WALLET2]
+    w2 = list(zip(WALLET2, WEIGHTS2, w2_data))
 
-def wallet_analysis(wallet, start_date, end_date):
-    for ticker in wallet:
-        data = load_data(ticker, start_date, end_date)
-        print(f"Analyzing {ticker}")
+    weighted_wallet_analysis(w2)
+    normalized_graphs(w2, "wallet2_normalized.png")
+
+def wallet_analysis(wallet_data, start_date, end_date):
+    for ticker, weight, data in wallet_data:
         ticker_analysis(data, start_date, end_date)
 
-def weighted_wallet_analysis(weighted_wallet, start_date, end_date):
+def weighted_wallet_analysis(weighted_wallet_data):
     portfolio_returns = []
     portfolio_risks = []
     
-    for ticker, weight in weighted_wallet:
-        data = load_data(ticker, start_date, end_date)
-        if data is None:
-            print(f"Error: No data for {ticker}. Skipping.")
-            continue
-
+    for ticker, weight, data in weighted_wallet_data:
         # Calculate individual return rate and risk
         rr = return_rate(data)
         r = risk(data)
@@ -57,13 +59,13 @@ def weighted_wallet_analysis(weighted_wallet, start_date, end_date):
     print(f"\n\tPortfolio Return Rate: {portfolio_return_rate:.2f} %")
     print(f"\tPortfolio Risk: {portfolio_risk:.2f} %\n")
 
-def ticker_analysis(data, start_date, end_date):
-    data.index = pd.to_datetime(data.index)
+def ticker_analysis(ticker_data, start_date, end_date):
+    ticker_data.index = pd.to_datetime(ticker_data.index)
 
     start = datetime.strptime(start_date, DATE_FORMAT)
     end = datetime.strptime(end_date, DATE_FORMAT)
 
-    if data is None:
+    if ticker_data is None:
         print("Error: No data available for the given ticker.")
         return
 
@@ -75,7 +77,7 @@ def ticker_analysis(data, start_date, end_date):
         year_end = datetime(current_year, 12, 31)
 
         # Filter data for the current year
-        yearly_data = data[(data.index >= year_start) & (data.index <= year_end)]
+        yearly_data = ticker_data[(ticker_data.index >= year_start) & (ticker_data.index <= year_end)]
         print(yearly_data.head(1))
         print(yearly_data.tail(1))
         print(len(yearly_data))
@@ -87,17 +89,11 @@ def ticker_analysis(data, start_date, end_date):
         print(f"  {current_year}, Return Rate: {rr:.2f} %, Risk: {r:.2f} %")
         current_year += 1
 
-def normalized_graphs(tickers):
+def normalized_graphs(wallet_data, filename):
         # Collect tickers from both wallets
     plt.figure(figsize=(12, 8))
 
-    for ticker in tickers:
-        # Load data
-        data = load_data(ticker, START_DATE, END_DATE)
-        if data is None or 'Close' not in data.columns:
-            print(f"No data for {ticker}")
-            continue
-
+    for ticker, weight, data in wallet_data:
         # Convert index to datetime if necessary
         data.index = pd.to_datetime(data.index)
 
@@ -113,7 +109,13 @@ def normalized_graphs(tickers):
     plt.title('Normalized Price Evolution Over Time')
     plt.legend()
     plt.grid(True)
-    plt.show()
+
+    # Save the plot
+    file_path = os.path.join(PLOT_FOLDER, filename)
+    plt.savefig(file_path, format="png")
+    
+    # Clear the plot for the next ticker
+    plt.clf()
 
 # def return_rate(data):
 #     df = data.copy()
