@@ -17,7 +17,10 @@ def main():
     w1 = [(ticker, 1/len(WALLET1)) for ticker in WALLET1]
     w2 = [(ticker, 1/len(WALLET2)) for ticker in WALLET2]
 
+    print("\n\tWallet 1:\n")
     weighted_wallet_analysis(w1, START_DATE, END_DATE)
+    print("\t------------------")
+    print("\n\tWallet 2:\n")
     weighted_wallet_analysis(w2, START_DATE, END_DATE)
 
     # normalized_graphs(WALLET1)
@@ -51,8 +54,8 @@ def weighted_wallet_analysis(weighted_wallet, start_date, end_date):
     portfolio_return_rate = sum(portfolio_returns)
     portfolio_risk = (sum(portfolio_risks) ** 0.5)  # Square root of sum of variances
 
-    print(f"Portfolio Return Rate: {portfolio_return_rate:.2f} %")
-    print(f"Portfolio Risk: {portfolio_risk:.2f} %")
+    print(f"\n\tPortfolio Return Rate: {portfolio_return_rate:.2f} %")
+    print(f"\tPortfolio Risk: {portfolio_risk:.2f} %\n")
 
 def ticker_analysis(data, start_date, end_date):
     data.index = pd.to_datetime(data.index)
