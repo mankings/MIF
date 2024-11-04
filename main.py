@@ -35,6 +35,20 @@ def main():
     weighted_wallet_analysis(w2)
     normalized_graphs(w2, "wallet2_normalized.png")
 
+    print("------------------")
+
+    print("\nEfficient Frontier:\n")
+    efficient_frontier(w1)
+
+def efficient_frontier(wallet_data):
+    # Calculate the returns vector
+    r = np.array([return_rate(data) for _, _, data in wallet_data])
+
+    # Calculate the covariance matrix
+    cov_matrix = np.cov([data["Close"] for _, _, data in wallet_data])
+
+    print(cov_matrix)
+
 def wallet_analysis(wallet_data, start_date, end_date):
     for ticker, weight, data in wallet_data:
         ticker_analysis(data, start_date, end_date)
