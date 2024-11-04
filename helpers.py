@@ -10,11 +10,11 @@ def load_data(ticker, start, end):
     file = f"{DATA_FOLDER}{ticker}.csv"
 
     if os.path.exists(file):
-        print(f"\nLoading data from {file}...")
+        print(f"Loading data from {file}...")
         data = pd.read_csv(file, parse_dates=True, index_col=0)
 
     else: 
-        print(f"\nFetching data for {ticker} using yfinance...")
+        print(f"Fetching data for {ticker} using yfinance...")
         data = fetch_data(ticker, start, end)
         data.to_csv(file)
 

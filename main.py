@@ -20,8 +20,8 @@ def main():
     weighted_wallet_analysis(w1, START_DATE, END_DATE)
     weighted_wallet_analysis(w2, START_DATE, END_DATE)
 
-    normalized_graphs(WALLET1)
-    normalized_graphs(WALLET2)
+    # normalized_graphs(WALLET1)
+    # normalized_graphs(WALLET2)
 
 def wallet_analysis(wallet, start_date, end_date):
     for ticker in wallet:
