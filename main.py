@@ -28,19 +28,31 @@ def main():
 
     weighted_wallet_analysis(w1)
     normalized_graphs(w1, "wallet1_normalized.png")
+
+    print("\nWallet 2:\n")
+    w2_data = [load_data(ticker, START_DATE, END_DATE) for ticker in WALLET2]
+    w2 = list(zip(WALLET2, WEIGHTS2, w2_data))
+
+    weighted_wallet_analysis(w2)
+    normalized_graphs(w2, "wallet2_normalized.png")
     
     print("------------------")
 
-    print("Efficient Frontier:\n")
+    print("Efficient Frontier1:\n")
     efficient_frontier_formula(w1)
-    efficient_frontier_plot(w1)
+    efficient_frontier_plot(w1, "wallet1_efficient_frontier.png")
 
-def efficient_frontier_plot(wallet_data):
+    print("Efficient Frontier2:\n")
+
+    efficient_frontier_formula(w2)
+    efficient_frontier_plot(w2, "wallet2_efficient_frontier.png")
+
+def efficient_frontier_plot(wallet_data, filename):
     r = np.array([return_rate(data) for _, _, data in wallet_data])
     cov_matrix = covariance_matrix(wallet_data)
 
     # Generate random portfolios    
-    results, weights = random_portfolios(r, cov_matrix, num_portfolios=NUM_PORTFOLIOS)
+    results, _ = random_portfolios(r, cov_matrix, num_portfolios=NUM_PORTFOLIOS)
 
     # Compute Efficient Frontier
     target_returns = np.linspace(min(results[1, :]), max(results[1, :]), 100)
@@ -58,7 +70,7 @@ def efficient_frontier_plot(wallet_data):
     plt.grid(True)
 
     # Save the plot
-    file_path = os.path.join(PLOT_FOLDER, "efficient_frontier.png")
+    file_path = os.path.join(PLOT_FOLDER, filename)
     plt.savefig(file_path, format="png")
 
     # Clear the plot for the next ticker
@@ -71,9 +83,6 @@ def efficient_frontier_formula(wallet_data):
     # Calculate the covariance matrix using annualized returns
     cov_matrix = covariance_matrix(wallet_data)
 
-    print("Covariance Matrix:")
-    print(cov_matrix)
-
     # Unitary vector
     u = np.array([1 for _ in wallet_data])
 
@@ -83,11 +92,6 @@ def efficient_frontier_formula(wallet_data):
     a3 = np.transpose(u) @ np.linalg.inv(cov_matrix) @ u
 
     d = a1 * a3 - a2 ** 2
-
-    print("a1: ", a1)
-    print("a2: ", a2)
-    print("a3: ", a3)
-    print("d: ", d)
 
     k1 = (a3 / d)
     k2 = (-2 * a2 / d)
@@ -197,10 +201,20 @@ def risk(data):
     return annualized_risk
 
 def covariance_matrix(wallet_data):
-    returns = np.array([data["Close"].pct_change().dropna() for _, _, data in wallet_data])
-    cov_matrix = np.cov(returns) * TRADING_DAYS
+    # Calculate percentage change and align lengths
+    returns = [
+        data["Close"].pct_change().dropna().to_numpy() for _, _, data in wallet_data
+    ]
+    
+    # Align lengths of returns
+    min_length = min(len(ret) for ret in returns)
+    aligned_returns = np.array([ret[-min_length:] for ret in returns])
+
+    # Calculate the covariance matrix
+    cov_matrix = np.cov(aligned_returns) * TRADING_DAYS
 
     return cov_matrix
+
 
 
 if __name__ == "__main__":
