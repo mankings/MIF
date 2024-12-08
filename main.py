@@ -4,19 +4,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from datetime import datetime
-from helpers import load_data
+from helpers import load_data, random_portfolios, compute_efficient_frontier
 
 PLOT_FOLDER = "plots"
 
 DATE_FORMAT = '%Y-%m-%d'
 START_DATE = "2020-01-01"
 END_DATE = "2023-12-31"
+TRADING_DAYS = 252
 
 WALLET1 = ["WOOD", "CUT", "IBB", "ERTH"]                                            # biological etf
 WEIGHTS1 = [1/len(WALLET1) for _ in WALLET1]
 
 WALLET2 = ["VAW", "IYM", "BAS.DE", "DOW", "2020.SR", "CTVA", "MOS", "CF", "UAN"]    # chemical etf
 WEIGHTS2 = [1/len(WALLET2) for _ in WALLET2]
+
+NUM_PORTFOLIOS = 5000
 
 def main():
     print("\nWallet 1:\n")
@@ -28,36 +31,76 @@ def main():
     
     print("------------------")
 
-    print("\nWallet 2:\n")
-    w2_data = [load_data(ticker, START_DATE, END_DATE) for ticker in WALLET2]
-    w2 = list(zip(WALLET2, WEIGHTS2, w2_data))
+    print("Efficient Frontier:\n")
+    efficient_frontier_formula(w1)
+    efficient_frontier_plot(w1)
 
-    weighted_wallet_analysis(w2)
-    normalized_graphs(w2, "wallet2_normalized.png")
+def efficient_frontier_plot(wallet_data):
+    r = np.array([return_rate(data) for _, _, data in wallet_data])
+    cov_matrix = covariance_matrix(wallet_data)
 
-    print("------------------")
+    # Generate random portfolios    
+    results, weights = random_portfolios(r, cov_matrix, num_portfolios=NUM_PORTFOLIOS)
 
-    print("\nEfficient Frontier:\n")
-    efficient_frontier(w1)
+    # Compute Efficient Frontier
+    target_returns = np.linspace(min(results[1, :]), max(results[1, :]), 100)
+    frontier_stddevs = compute_efficient_frontier(r, cov_matrix, target_returns)
 
-def efficient_frontier(wallet_data):
+    # Plot Efficient Frontier and random portfolios
+    plt.figure(figsize=(10, 7))
+    plt.scatter(results[0, :], results[1, :], c=results[2, :], cmap='viridis', marker='o', alpha=0.5)
+    plt.plot(frontier_stddevs, target_returns, 'r--', linewidth=2)
+    plt.title('Efficient Frontier and Portfolio Scattering')
+    plt.xlabel('Risk (Standard Deviation)')
+    plt.ylabel('Return')
+    # plt.colorbar(label='Sharpe Ratio')
+    # plt.legend()
+    plt.grid(True)
+
+    # Save the plot
+    file_path = os.path.join(PLOT_FOLDER, "efficient_frontier.png")
+    plt.savefig(file_path, format="png")
+
+    # Clear the plot for the next ticker
+    plt.clf()
+              
+def efficient_frontier_formula(wallet_data):
     # Calculate the returns vector
     r = np.array([return_rate(data) for _, _, data in wallet_data])
 
-    # Calculate the covariance matrix
-    cov_matrix = np.cov([data["Close"] for _, _, data in wallet_data])
+    # Calculate the covariance matrix using annualized returns
+    cov_matrix = covariance_matrix(wallet_data)
 
+    print("Covariance Matrix:")
     print(cov_matrix)
 
-def wallet_analysis(wallet_data, start_date, end_date):
-    for ticker, weight, data in wallet_data:
-        ticker_analysis(data, start_date, end_date)
+    # Unitary vector
+    u = np.array([1 for _ in wallet_data])
+
+    # Calculate the efficient frontier formula
+    a1 = np.transpose(r) @ np.linalg.inv(cov_matrix) @ r
+    a2 = np.transpose(r) @ np.linalg.inv(cov_matrix) @ u
+    a3 = np.transpose(u) @ np.linalg.inv(cov_matrix) @ u
+
+    d = a1 * a3 - a2 ** 2
+
+    print("a1: ", a1)
+    print("a2: ", a2)
+    print("a3: ", a3)
+    print("d: ", d)
+
+    k1 = (a3 / d)
+    k2 = (-2 * a2 / d)
+    k3 = (a1 / d)
+
+    print(f"Final formula: {k1} e^2 + {k2} e + {k3}")
+    print(f"Return of the wallet with minimum risk: {a2/a3:.2f}")
 
 def weighted_wallet_analysis(weighted_wallet_data):
     portfolio_returns = []
     portfolio_risks = []
     
-    for ticker, weight, data in weighted_wallet_data:
+    for _, weight, data in weighted_wallet_data:
         # Calculate individual return rate and risk
         rr = return_rate(data)
         r = risk(data)
@@ -68,10 +111,10 @@ def weighted_wallet_analysis(weighted_wallet_data):
 
     # Calculate portfolio metrics
     portfolio_return_rate = sum(portfolio_returns)
-    portfolio_risk = (sum(portfolio_risks) ** 0.5)  # Square root of sum of variances
+    portfolio_risk = (np.sqrt(sum(portfolio_risks)))  # Square root of sum of variances
 
-    print(f"\n\tPortfolio Return Rate: {portfolio_return_rate:.2f} %")
-    print(f"\tPortfolio Risk: {portfolio_risk:.2f} %\n")
+    print(f"\tPortfolio Return Rate: {portfolio_return_rate:.2f}")
+    print(f"\tPortfolio Risk: {portfolio_risk:.2f}\n")
 
 def ticker_analysis(ticker_data, start_date, end_date):
     ticker_data.index = pd.to_datetime(ticker_data.index)
@@ -131,43 +174,34 @@ def normalized_graphs(wallet_data, filename):
     # Clear the plot for the next ticker
     plt.clf()
 
-# def return_rate(data):
-#     df = data.copy()
-#     df["Daily Return"] = df["Close"].pct_change()
-#     average_daily_return = df["Daily Return"].mean()
-    
-#     annualized_return = (1 + average_daily_return) ** len(df) - 1
-
-#     return annualized_return * 100
-        
-# def risk(data):
-#     df = data.copy()
-#     df["Daily Return"] = df["Close"].pct_change()
-#     risk = df["Daily Return"].std() * 100
-
-#     return risk
-
 def return_rate(data):
     df = data.copy()
-    df["Daily Return"] = df["Close"].pct_change()
+    df["Daily Return"] = df["Close"].pct_change().dropna()
 
     # Calculate cumulative return over the entire period
     cumulative_return = (1 + df["Daily Return"]).prod() - 1
 
-    # Annualize the cumulative return based on trading days (252 days in a typical year)
-    annualized_return = (1 + cumulative_return) ** (252 / len(df.dropna())) - 1
+    # Annualize the cumulative return based on trading days (TRADING_DAYS days in a typical year)
+    annualized_return = (1 + cumulative_return) ** (TRADING_DAYS / len(df.dropna())) - 1
 
-    return annualized_return * 100
+    return annualized_return
 
 def risk(data):
     df = data.copy()
-    df["Daily Return"] = df["Close"].pct_change()
+    df["Daily Return"] = df["Close"].pct_change().dropna()
 
     # Calculate daily return standard deviation and annualize it
     daily_std_dev = df["Daily Return"].std()
-    annualized_risk = daily_std_dev * np.sqrt(252)
+    annualized_risk = daily_std_dev * np.sqrt(TRADING_DAYS)
 
-    return annualized_risk * 100
+    return annualized_risk
+
+def covariance_matrix(wallet_data):
+    returns = np.array([data["Close"].pct_change().dropna() for _, _, data in wallet_data])
+    cov_matrix = np.cov(returns) * TRADING_DAYS
+
+    return cov_matrix
+
 
 if __name__ == "__main__":
     main()
