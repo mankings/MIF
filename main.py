@@ -6,14 +6,14 @@ START_DATE = "2020-01-01"
 END_DATE = "2023-12-31"
 TRADING_DAYS = 252
 
-WALLET1 = ["WOOD", "CUT", "IBB", "ERTH"]                                 # biological etf
+WALLET1 = ["WOOD", "CUT", "IBB", "ERTH"]                       # biological etf
 WALLET2 = ["VAW", "IYM", "DOW", "CTVA", "MOS", "CF", "UAN"]    # chemical etf
 FULL_WALLET = WALLET1 + WALLET2
 
 def main():
     ## data fetching
     print("\nLoading Wallet 1")
-    close1 = load_wallet_data(WALLET1, START_DATE, END_DATE, "wallet1.csv")
+    close1 = load_wallet_data(WALLET1, START_DATE, END_DATE, "wallet1")
     normalized_graphs(close1, "wallet1_normalized.png")
     print("\nSimulating wallet1 efficient frontier...")
     daily_returns1 = close1.pct_change(fill_method=None).dropna()
@@ -25,7 +25,7 @@ def main():
     optimized_weights1b, min_risk1 = optimize_min_risk(mean_returns1, cov_matrix1, close1.columns)
 
     print("\nLoading Wallet 2")
-    close2 = load_wallet_data(WALLET2, START_DATE, END_DATE, "wallet2.csv")
+    close2 = load_wallet_data(WALLET2, START_DATE, END_DATE, "wallet2")
     normalized_graphs(close2, "wallet2_normalized.png")
     print("\nSimulating wallet2 efficient frontier...")
     daily_returns2 = close2.pct_change(fill_method=None).dropna()

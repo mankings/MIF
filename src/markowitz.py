@@ -104,6 +104,11 @@ def optimize_max_sharpe(mean_returns, cov_matrix, tickers):
         optimal_weights = result.x
         optimal_sharpe = -result.fun  # Convert back to positive Sharpe Ratio
         print(f"Max Sharpe Ratio: {optimal_sharpe}")
+
+        expected_return = np.dot(optimal_weights, mean_returns)
+        print(f"Expected return of these weights: {expected_return}")
+        expected_risk = np.sqrt(np.dot(optimal_weights.T, np.dot(cov_matrix, optimal_weights)))
+        print(f"Expected risk of these weights: {expected_risk}")
         
         # Pair tickers with weights
         ticker_weights = dict(zip(tickers, optimal_weights))
@@ -135,12 +140,19 @@ def optimize_min_risk(mean_returns, cov_matrix, tickers):
 
     if result.success:
         optimal_weights = result.x
+
         min_risk = result.fun  # Minimum risk
+        print(f"Minimum Risk: {min_risk}")
+
+        expected_return = np.dot(optimal_weights, mean_returns)
+        print(f"Expected return of these weights: {expected_return}")
+
+        sharpeRatio = expected_return / min_risk
+        print(f"Sharpe Ratio of these weights: {sharpeRatio}")
 
         # Pair tickers with weights
         ticker_weights = dict(zip(tickers, optimal_weights))
 
-        print(f"Minimum Risk: {min_risk}")
         print("Optimal Weights by Ticker:")
         for ticker, weight in ticker_weights.items():
             print(f"\t{ticker}: {weight:.4f}")
